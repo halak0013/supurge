@@ -1,15 +1,19 @@
 # Süpürge uygulaması
 
-`cargo add rand`
+![alt text](doc/app.png)
 
-flowchart TD
-    A[Başlangıç Noktası] --> B[Rastgele Nokta Seç]
-    B --> C{En Yakın Düğüm Bul}
-    C --> D[Yeni Düğüme Doğru\nBelirli Uzaklık İlerle]
-    D --> E{Engel Kontrolü}
-    E -->|Engel Var| F[Bu Yolu İptal Et\nYeni Rastgele\nNokta Seç]
-    F --> B
-    E -->|Engel Yok| G[Yeni Düğümü\nAğaca Ekle]
-    G --> H{Hedefe Ulaşıldı mı?}
-    H -->|Hayır| B
-    H -->|Evet| I[Yolu Tamamla]
+Süpürge uygulamasında yapılabilecekler:
+- İstenildiği kadar oda eklenilip oda silinebilir.
+- Bir sonraki adım geçiş yapılabilir.
+    - Her adım geçişinde oda eğer pisse temizlenir.
+    - temiz veya pis olmasına bakılmaksızın diğer odaya geçişinde rastgele temiz veya pis olarak atanır
+- istenildiği kadar adım ileri atlatılabilir.
+    - Bunu için **Skip Step** öncesine geçilmek istenen adım sayısı yazılıp atlanabilir
+- Grafiklerden bazı çıkarımlar yapılabilir.
+    - **Cleaning rate by step** -> her durumdaki odaların toplam temiz ve pis oda sayısının yüzdelik oranını veriyor.
+    - **Aggregate cleaning rate** -> Tüm sistemin sürekli olarak temiz ve pis oda sayısı toplanıp tüm durumların temiz ve pis yüzdelik oranını veriyor.
+- Grafiklerin üzerine geldiğinizde size o anki değerin detaylarını alabilirsiniz
+- Sağ tarafta gösterilen geçmiş kısmında 
+    - her adımdaki durumları gösteren,
+    - hangi adımda olduğunu gösteren,
+    - eğer temizlik olduysa bunu hangi odada yaptığını gösteren, bir geçmiş listesi bulunmaktadır.

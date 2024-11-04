@@ -140,13 +140,16 @@ fn main() {
                     ui.add(plot_ui);
                     ui.add(summary_plot_ui);
                 });
-                ScrollArea::vertical().max_height(180.).show(ui, |ui| {
-                    ui.vertical(|ui| {
-                        let mut s = String::new();
-                        for (i, h) in app_mem.borrow().history.iter().enumerate() {
-                            s += &format!("{}-) {}\n", i, h.state);
-                        }
-                        ui.label(s);
+                ui.vertical(|ui| {
+                    ui.label("History");
+                    ScrollArea::vertical().max_height(400.).show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            let mut s = String::new();
+                            for (i, h) in app_mem.borrow().history.iter().enumerate() {
+                                s += &format!("{}-) {}\n", i, h.state);
+                            }
+                            ui.label(s);
+                        });
                     });
                 });
             });

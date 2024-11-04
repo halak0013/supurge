@@ -21,7 +21,7 @@ impl<'a> egui::Widget for CustomPlotUi<'a> {
             };
             let y_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
                 let percent = mark.value;
-                    format!("{percent:.0}%")
+                format!("{percent:.0}%")
             };
             let x_axes = vec![AxisHints::new_x()
                 .label(&self.x_label)
