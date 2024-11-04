@@ -1,6 +1,6 @@
 pub mod ui;
 
-use eframe::egui::{self, ScrollArea};
+use eframe::egui::{self, DragValue, ScrollArea};
 
 use egui_plot::{PlotPoint, PlotPoints};
 // A - B
@@ -10,13 +10,16 @@ use egui_plot::{PlotPoint, PlotPoints};
 // odaların tutulduğu liste
 // geçmişin tutulduğu liste
 use ui::plot::CustomPlotUi;
-use ui::room_w::{get_all_room_state, room, Room};
+use ui::room_w::{get_all_room_clean_dirty_count, get_all_room_state, room, Room};
 
 #[derive(Debug)]
 struct AppMemory {
     current_index: usize,
     history: Vec<String>,
     rooms: Vec<Room>,
+    dirty_count: usize,
+    clean_count: usize,
+    iteration_count: u32,
 }
 
 impl Default for AppMemory {
@@ -27,6 +30,9 @@ impl Default for AppMemory {
         Self {
             current_index: Default::default(),
             history: Default::default(),
+            clean_count: Default::default(),
+            dirty_count: Default::default(),
+            iteration_count: Default::default(),
             rooms: vec![ra, rb, rc],
         }
     }
@@ -36,7 +42,7 @@ fn main() {
     let app_mem = std::rc::Rc::new(std::cell::RefCell::new(AppMemory::default()));
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 480.0]),
         ..Default::default()
     };
 
@@ -51,21 +57,33 @@ fn main() {
             });
             ui.add_space(10.);
             ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.horizontal(|ui| {
-                        // room insert delete buttons
-                        if ui.button("Insert Room").clicked() {
-                            let ch = (65 + app_mem.borrow().rooms.len()) as u8 as char;
-                            app_mem.borrow_mut().rooms.push(Room::new(ch.into()));
-                        }
-                        if ui.button("Delete Room").clicked() {
-                            if app_mem.borrow().rooms.len() > 1 {
-                                app_mem.borrow_mut().rooms.pop();
-                            }
-                        }
-                    });
-                    ui.add_space(10.);
-                    if ui.button("Next iteration").clicked() {
+                // room insert delete buttons
+                if ui.button("Insert Room").clicked() {
+                    let ch = (65 + app_mem.borrow().rooms.len()) as u8 as char;
+                    app_mem.borrow_mut().rooms.push(Room::new(ch.into()));
+                }
+                if ui.button("Delete Room").clicked() {
+                    if app_mem.borrow().rooms.len() > 1 {
+                        app_mem.borrow_mut().rooms.pop();
+                    }
+                }
+            });
+            ui.add_space(10.);
+            ui.horizontal(|ui| {
+                if ui.button("Next iteration").clicked() {
+                    next_iteration(&mut app_mem.borrow_mut());
+                    if app_mem.borrow().current_index == app_mem.borrow().rooms.len() - 1 {
+                        app_mem.borrow_mut().current_index = 0;
+                    } else {
+                        app_mem.borrow_mut().current_index += 1;
+                    }
+                }
+                ui.label("---->");
+                ui.add(DragValue::new(&mut app_mem.borrow_mut().iteration_count));
+
+                if ui.button("Skip steps").clicked() {
+                    let iter_count = app_mem.borrow().iteration_count;
+                    for _ in 0..iter_count {
                         next_iteration(&mut app_mem.borrow_mut());
                         if app_mem.borrow().current_index == app_mem.borrow().rooms.len() - 1 {
                             app_mem.borrow_mut().current_index = 0;
@@ -73,17 +91,9 @@ fn main() {
                             app_mem.borrow_mut().current_index += 1;
                         }
                     }
-                    ui.add_space(200.);
-                });
-                ScrollArea::vertical().show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        let mut s = String::new();
-                        for (i, h) in app_mem.borrow().history.iter().enumerate() {
-                            s += &format!("{}-) {}\n", i, h);
-                        }
-                        ui.label(s);
-                    });
-                });
+                }
+            });
+            ui.horizontal(|ui| {
                 let points: PlotPoints = PlotPoints::from_iter(
                     app_mem
                         .borrow()
@@ -101,6 +111,15 @@ fn main() {
                     "Supurge Verisi".into(),
                 );
                 ui.add(plot_ui);
+                ScrollArea::vertical().max_height(180.).show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        let mut s = String::new();
+                        for (i, h) in app_mem.borrow().history.iter().enumerate() {
+                            s += &format!("{}-) {}\n", i, h);
+                        }
+                        ui.label(s);
+                    });
+                });
             });
         });
     })
@@ -109,6 +128,9 @@ fn main() {
 
 fn next_iteration(app_mem: &mut AppMemory) {
     let curr = app_mem.current_index;
+    if curr > app_mem.rooms.len() {
+        return;
+    }
     let cur_state = app_mem.rooms[curr].dirty_state;
     let mut s = get_all_room_state(&app_mem.rooms);
     if cur_state {
@@ -116,4 +138,5 @@ fn next_iteration(app_mem: &mut AppMemory) {
     }
     app_mem.history.push(s);
     app_mem.rooms[curr].random_dirty();
+    (app_mem.clean_count, app_mem.dirty_count) = get_all_room_clean_dirty_count(&app_mem.rooms);
 }

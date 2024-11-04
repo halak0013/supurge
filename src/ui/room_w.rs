@@ -1,13 +1,11 @@
 use eframe::egui::{self, Color32, RichText, Stroke};
 use rand::Rng;
 
-
 #[derive(Debug, Clone)]
 pub struct Room {
     pub name: String,
     pub dirty_state: bool,
 }
-
 
 impl Room {
     pub fn new(name: String) -> Self {
@@ -38,7 +36,6 @@ impl std::fmt::Display for Room {
     }
 }
 
-
 pub fn get_all_room_state(rooms: &[Room]) -> String {
     let mut res = String::new();
     for (i, r) in rooms.iter().enumerate() {
@@ -49,6 +46,22 @@ pub fn get_all_room_state(rooms: &[Room]) -> String {
         }
     }
     res
+}
+pub fn get_all_room_clean_dirty_count(rooms: &[Room]) -> (usize, usize) {
+    /* rooms.iter().for_each(|room| {
+        if room.dirty_state {
+            dirty_rooms += 1;
+        } else {
+            clean_rooms += 1;
+        }
+    }); */
+    let (clean_rooms, dirty_rooms): (usize, usize) = rooms
+        .iter()
+        .map(|room| if room.dirty_state { 1 } else { 0 })
+        .fold((0, 0), |(clean, dirty), state| {
+            (clean + state, dirty + (1 - state))
+        });
+    (clean_rooms, dirty_rooms)
 }
 
 pub fn room(ui: &mut egui::Ui, room: &Room, is_selected: bool) {

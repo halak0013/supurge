@@ -31,14 +31,13 @@ impl<'a> egui::Widget for CustomPlotUi<'a> {
 
             let line = Line::new(self.points).name(&self.title);
 
-
             Plot::new(&self.title)
                 .width(300.)
                 .height(300.)
                 .custom_x_axes(x_axes)
                 .custom_y_axes(y_axes)
                 .label_formatter(self.label_formatter)
-                .show(ui, |plot_ui|{
+                .show(ui, |plot_ui| {
                     plot_ui.line(line);
                 });
         })
