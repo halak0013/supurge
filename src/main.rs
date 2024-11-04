@@ -4,7 +4,7 @@ use eframe::egui::{self, DragValue, ScrollArea};
 
 use egui_plot::{PlotPoint, PlotPoints};
 // A - B
-/// oda structı
+/// oda struct'ı
 /// oda içinde isim ve temizlik durumu
 /// her adımda çalışacak kontrol fonksiyon sonrası rastgele kirletme fonksiyonu
 // odaların tutulduğu liste
@@ -15,10 +15,8 @@ use ui::room_w::{get_all_room_clean_dirty_count, get_all_room_state, room, Room}
 #[derive(Debug)]
 struct AppMemory {
     current_index: usize,
-    history: Vec<String>,
+    history: Vec<History>,
     rooms: Vec<Room>,
-    dirty_count: usize,
-    clean_count: usize,
     iteration_count: u32,
 }
 
@@ -30,19 +28,26 @@ impl Default for AppMemory {
         Self {
             current_index: Default::default(),
             history: Default::default(),
-            clean_count: Default::default(),
-            dirty_count: Default::default(),
             iteration_count: Default::default(),
             rooms: vec![ra, rb, rc],
         }
     }
 }
 
+#[derive(Debug, Default)]
+struct History {
+    state: String,
+    clean_count: usize,
+    dirty_count: usize,
+    clean_count_sum: usize,
+    dirty_count_sum: usize,
+}
+
 fn main() {
     let app_mem = std::rc::Rc::new(std::cell::RefCell::new(AppMemory::default()));
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 480.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 500.0]),
         ..Default::default()
     };
 
@@ -94,28 +99,52 @@ fn main() {
                 }
             });
             ui.horizontal(|ui| {
-                let points: PlotPoints = PlotPoints::from_iter(
-                    app_mem
-                        .borrow()
-                        .rooms
-                        .iter()
-                        .enumerate()
-                        .map(|(i, room)| [i as f64, if room.dirty_state { 1.0 } else { 0.0 }]),
-                );
-                let label_formatter = |_s: &str, val: &PlotPoint| format!("kirlilik {:.2}", val.y);
-                let plot_ui = CustomPlotUi::new(
-                    "Adım".into(),
-                    "Değer".into(),
-                    points,
-                    Box::new(label_formatter),
-                    "Supurge Verisi".into(),
-                );
-                ui.add(plot_ui);
+                ui.vertical(|ui| {
+                    let get_clean_percent = |c: f64, d: f64| -> f64 { (c / (c + d)) * 100. };
+                    let points: PlotPoints = PlotPoints::from_iter(
+                        app_mem.borrow().history.iter().enumerate().map(|(i, h)| {
+                            [
+                                i as f64,
+                                get_clean_percent(h.clean_count as f64, h.dirty_count as f64),
+                            ]
+                        }),
+                    );
+                    let label_formatter = |_s: &str, val: &PlotPoint| {
+                        format!("Clean rate: {:.2}\n Step: {:.0}", val.y, val.x)
+                    };
+                    let plot_ui = CustomPlotUi::new(
+                        "Step".into(),
+                        "Value".into(),
+                        points,
+                        Box::new(label_formatter),
+                        "Cleaning rate by step".into(),
+                    );
+                    let points_: PlotPoints = PlotPoints::from_iter(
+                        app_mem.borrow().history.iter().enumerate().map(|(i, h)| {
+                            [
+                                i as f64,
+                                get_clean_percent(
+                                    h.clean_count_sum as f64,
+                                    h.dirty_count_sum as f64,
+                                ),
+                            ]
+                        }),
+                    );
+                    let summary_plot_ui = CustomPlotUi::new(
+                        "Step".into(),
+                        "Percent".into(),
+                        points_,
+                        Box::new(label_formatter),
+                        "Aggregate cleaning rate".into(),
+                    );
+                    ui.add(plot_ui);
+                    ui.add(summary_plot_ui);
+                });
                 ScrollArea::vertical().max_height(180.).show(ui, |ui| {
                     ui.vertical(|ui| {
                         let mut s = String::new();
                         for (i, h) in app_mem.borrow().history.iter().enumerate() {
-                            s += &format!("{}-) {}\n", i, h);
+                            s += &format!("{}-) {}\n", i, h.state);
                         }
                         ui.label(s);
                     });
@@ -127,16 +156,28 @@ fn main() {
 }
 
 fn next_iteration(app_mem: &mut AppMemory) {
-    let curr = app_mem.current_index;
+    let mut curr = app_mem.current_index;
     if curr > app_mem.rooms.len() {
-        return;
+        app_mem.current_index = app_mem.rooms.len() - 1;
+        curr = app_mem.current_index;
     }
     let cur_state = app_mem.rooms[curr].dirty_state;
-    let mut s = get_all_room_state(&app_mem.rooms);
+    let mut s = format!(
+        "{}-> {}",
+        app_mem.rooms[curr].name,
+        get_all_room_state(&app_mem.rooms)
+    );
     if cur_state {
         s += &format!(" | {}", app_mem.rooms[curr].clean_room());
     }
-    app_mem.history.push(s);
     app_mem.rooms[curr].random_dirty();
-    (app_mem.clean_count, app_mem.dirty_count) = get_all_room_clean_dirty_count(&app_mem.rooms);
+    let (clean_count, dirty_count) = get_all_room_clean_dirty_count(&app_mem.rooms);
+    let h = &app_mem.history;
+    app_mem.history.push(History {
+        state: s,
+        clean_count,
+        dirty_count,
+        clean_count_sum: h.last().map_or(0, |last| last.clean_count) + clean_count,
+        dirty_count_sum: h.last().map_or(0, |last| last.dirty_count) + dirty_count,
+    });
 }

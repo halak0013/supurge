@@ -57,7 +57,7 @@ pub fn get_all_room_clean_dirty_count(rooms: &[Room]) -> (usize, usize) {
     }); */
     let (clean_rooms, dirty_rooms): (usize, usize) = rooms
         .iter()
-        .map(|room| if room.dirty_state { 1 } else { 0 })
+        .map(|room| if room.dirty_state { 0 } else { 1 })
         .fold((0, 0), |(clean, dirty), state| {
             (clean + state, dirty + (1 - state))
         });

@@ -13,14 +13,15 @@ pub struct CustomPlotUi<'a> {
 
 impl<'a> egui::Widget for CustomPlotUi<'a> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        ui.label(&self.title);
         ui.horizontal(|ui| {
             let x_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
                 let val = mark.value;
                 format!("{}. {}", val, &self.x_label)
             };
             let y_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
-                let val = mark.value;
-                format!("{:.1}", val)
+                let percent = mark.value;
+                    format!("{percent:.0}%")
             };
             let x_axes = vec![AxisHints::new_x()
                 .label(&self.x_label)
@@ -32,8 +33,8 @@ impl<'a> egui::Widget for CustomPlotUi<'a> {
             let line = Line::new(self.points).name(&self.title);
 
             Plot::new(&self.title)
-                .width(300.)
-                .height(300.)
+                .width(400.)
+                .height(200.)
                 .custom_x_axes(x_axes)
                 .custom_y_axes(y_axes)
                 .label_formatter(self.label_formatter)
